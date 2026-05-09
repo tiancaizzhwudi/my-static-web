@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>捷达科目三灯光全真模拟</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: sans-serif;
+            background: var(--bg);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        .header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #334155;
+        }
+
+        .score span {
+            color: var(--primary);
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: white;
+            background: #475569;
+        }
+
+        .btn-analysis {
+            background: var(--primary);
+        }
+
+        /* 播报设置 */
+        .settings-bar {
+            background: #111827;
+            padding: 8px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .toggle-btn {
+            padding: 4px 12px;
+            border-radius: 15px;
+            border: 1px solid #475569;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* 题目看板 */
+        .hud {
+            text-align: center;
+            padding: 15px;
+            background: #0f172a;
+        }
+
+        #mode-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: var(--warning);
+            color: #000;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        #q-text {
+            font-size: 20px;
+            min-height: 48px;
+            font-weight: bold;
+            line-height: 1.4;
+            color: #fff;
+        }
+
+        #timer {
+            font-size: 34px;
+            font-weight: 800;
+            color: var(--success);
+            font-family: monospace;
+        }
+
+        #timer.urgent {
+            color: var(--danger);
+        }
+
+        /* 核心模拟面板 (依照您提供的UI参考) */
+        .cockpit {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            position: relative;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            background: #334155;
+            border-radius: 25px;
+            border: 6px solid #475569;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            position: relative;
+        }
+
+        /* 遮罩层系统 */
+        #pause-overlay,
+        .mask {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .mask {
+            z-index: 110;
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        /* 拨杆组件 */
+        .lever-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lever-track {
+            width: 120px;
+            height: 36px;
+            background: #1e293b;
+            border-radius: 18px;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #475569;
+        }
+
+        .lever-handle {
+            width: 34px;
+            height: 28px;
+            background: #94a3b8;
+            border-radius: 14px;
+            position: absolute;
+            top: 3px;
+            left: 43px;
+            transition: 0.2s;
+        }
+
+        .lever-handle.left {
+            left: 4px;
+            background: var(--danger);
+        }
+
+        .lever-handle.right {
+            left: 82px;
+            background: var(--warning);
+        }
+
+        .lever-handle.flashed {
+            background: #fff;
+            box-shadow: 0 0 15px #fff;
+        }
+
+        /* 警示灯组件 */
+        .hazard-btn {
+            width: 50px;
+            height: 40px;
+            background: #7f1d1d;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            cursor: pointer;
+        }
+
+        .hazard-btn.active {
+            background: var(--danger);
+            animation: blink 0.8s infinite;
+        }
+
+        /* 旋钮组件 */
+        .knob {
+            width: 80px;
+            height: 80px;
+            background: #1e293b;
+            border-radius: 50%;
+            border: 4px solid #64748b;
+            position: relative;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .knob::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            width: 4px;
+            height: 20px;
+            background: white;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        /* 答题分析弹窗 */
+        .modal {
+            position: absolute;
+            inset: 0;
+            background: #0f172a;
+            display: none;
+            flex-direction: column;
+            z-index: 200;
+            padding: 20px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .table-wrap {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .row-green {
+            color: var(--success);
+        }
+
+        .row-red {
+            color: var(--danger);
+        }
+
+        .row-gray {
+            color: #64748b;
+        }
+
+        .mode-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        /* 底部确认按钮 */
+        .footer {
+            padding: 15px;
+            background: #1e293b;
+        }
+
+        .btn-confirm {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-confirm:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.3;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="score">正确:<span id="s-right">0</span> 错误:<span id="s-wrong">0</span></div>
+        <div class="nav-btns">
+            <button class="btn-sm btn-analysis" onclick="openAnalysis()">答题分析</button>
+            <button class="btn-sm" id="pause-btn" onclick="togglePause()">暂停</button>
+        </div>
+    </div>
+
+    <!-- 播报模式 -->
+    <div class="settings-bar">
+        <button class="toggle-btn active" id="ts-both" onclick="setSpeakMode(true)">显示题目 + 语音</button>
+        <button class="toggle-btn" id="ts-only" onclick="setSpeakMode(false)">仅有语音播报</button>
+    </div>
+
+    <div class="hud">
+        <div id="mode-tag">全随机模式</div>
+        <div id="q-text">点击下方开始训练</div>
+        <div id="timer">7.0</div>
+    </div>
+
+    <div class="cockpit">
+        <div class="panel" id="ui-panel">
+            <!-- 暂停遮罩 -->
+            <div id="pause-overlay">
+                <h1>已暂停</h1>
+                <p>点击上方按钮恢复</p>
+            </div>
+
+            <div class="lever-container">
+                <span style="font-size:11px; color:#94a3b8">远光 ← 默认 → 交替</span>
+                <div class="lever-track" onclick="handleLeverClick(event)">
+                    <div class="lever-handle" id="lever-handle"></div>
+                </div>
+                <div id="flash-count" style="font-size:12px; color:var(--warning); height:15px"></div>
+            </div>
+
+            <div style="text-align:center">
+                <div class="hazard-btn" id="hazard-btn" onclick="toggleHazard()"></div>
+                <div style="font-size:11px; margin-top:5px">应急灯</div>
+            </div>
+
+            <div style="text-align:center">
+                <div class="knob" id="knob" onclick="rotateKnob()"></div>
+                <div id="knob-label" style="font-size:11px; margin-top:5px">OFF</div>
+            </div>
+
+            <!-- 结果显示 -->
+            <div class="mask" id="result-mask">
+                <h2 id="res-title"></h2>
+                <p id="res-desc" style="margin: 15px 0; color: #cbd5e1;"></p>
+                <div style="font-size:12px; color: var(--primary)">自动进入下一题...</div>
+            </div>
+        </div>
+
+        <!-- 答题分析弹窗 -->
+        <div class="modal" id="analysis-modal">
+            <div class="modal-header">
+                <h3>答题统计分析</h3>
+                <button class="btn-sm" onclick="closeAnalysis()">返回</button>
+            </div>
+            <div class="table-wrap">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>题目内容</th>
+                            <th>占比</th>
+                            <th>正确率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analysis-body"></tbody>
+                </table>
+            </div>
+            <div class="mode-footer">
+                <button class="btn-sm" id="m-seq" onclick="setTrainMode('sequence')">顺序训练</button>
+                <button class="btn-sm" id="m-rand" onclick="setTrainMode('random')">随机训练</button>
+                <button class="btn-sm" id="m-wrong" onclick="setTrainMode('wrong')">错题专项</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <button class="btn-confirm" id="main-btn" onclick="handleMain()">开始训练</button>
+    </div>
+
+    <script>
+        const bank = [
+            { id: 0, q: "请开启前照灯", knob: 2, lever: 'middle', hazard: false, note: "旋钮转到大灯" },
+            { id: 1, q: "夜间在没有路灯，照明不良条件下行驶", knob: 2, lever: 'left', hazard: false, note: "开启大灯 + 拨杆拨向远光" },
+            { id: 2, q: "夜间在照明良好的道路上行驶", knob: 2, lever: 'middle', hazard: false, note: "请使用近光灯" },
+            { id: 3, q: "夜间通过急弯", knob: 2, lever: 'flash', hazard: false, note: "远近光交替(闪光2次)" },
+            { id: 4, q: "夜间通过坡路", knob: 2, lever: 'flash', hazard: false, note: "远近光交替(闪光2次)" },
+            { id: 5, q: "夜间通过拱桥", knob: 2, lever: 'flash', hazard: false, note: "远近光交替(闪光2次)" },
+            { id: 6, q: "夜间通过人行横道", knob: 2, lever: 'flash', hazard: false, note: "远近光交替(闪光2次)" },
+            { id: 7, q: "夜间超越前方车辆", knob: 2, lever: 'flash', hazard: false, note: "远近光交替(闪光2次)" },
+            { id: 8, q: "路边临时停车", knob: 1, lever: 'middle', hazard: true, note: "示廓灯 + 应急灯" },
+            { id: 9, q: "夜间在道路上发生故障妨碍交通又难以移动", knob: 1, lever: 'middle', hazard: true, note: "示廓灯 + 应急灯" },
+            { id: 10, q: "夜间与机动车会车", knob: 2, lever: 'middle', hazard: false, note: "请切换近光灯" }
+        ];
+
+        let state = {
+            car: { knob: 0, lever: 'middle', hazard: false, flash: 0 },
+            exam: { running: false, paused: false, mode: 'random', showTitle: true, current: null, seqIdx: 0, total: 0, score: { r: 0, w: 0 } },
+            stats: {},
+            timer: { ref: null, left: 7.0 }
+        };
+
+        bank.forEach(b => state.stats[b.id] = { count: 0, right: 0 });
+
+        // --- 核心控制 ---
+        function handleMain() {
+            if (!state.exam.running) {
+                forceResume(); // 开始时强行恢复
+                state.exam.running = true;
+                state.exam.score = { r: 0, w: 0 };
+                state.exam.total = 0;
+                state.exam.seqIdx = 0;
+                updateScoreUI();
+                nextQuestion();
+            } else {
+                submit();
+            }
+        }
+
+        function forceResume() {
+            state.exam.paused = false;
+            document.getElementById('pause-overlay').style.display = 'none';
+            document.getElementById('pause-btn').innerText = "暂停";
+            window.speechSynthesis.resume();
+        }
+
+        function nextQuestion() {
+            stopTimer();
+            forceResume(); // 切换题目时确保非暂停
+            document.getElementById('result-mask').style.display = 'none';
+            document.getElementById('main-btn').disabled = true;
+
+            if (state.exam.mode === 'sequence') {
+                state.exam.current = bank[state.exam.seqIdx];
+                state.exam.seqIdx = (state.exam.seqIdx + 1) % bank.length;
+            } else if (state.exam.mode === 'wrong') {
+                const wrongs = bank.filter(b => state.stats[b.id].count > state.stats[b.id].right);
+                if (wrongs.length === 0) {
+                    alert("优秀！暂无错题。"); setTrainMode('random'); return;
+                }
+                state.exam.current = wrongs[Math.floor(Math.random() * wrongs.length)];
+            } else {
+                state.exam.current = bank[Math.floor(Math.random() * bank.length)];
+            }
+
+            renderHUD();
+            speak(state.exam.current.q, () => {
+                document.getElementById('main-btn').disabled = false;
+                document.getElementById('main-btn').innerText = "确 定";
+                startTimer(7.0);
+            });
+        }
+
+        function renderHUD() {
+            const el = document.getElementById('q-text');
+            if (state.exam.showTitle) {
+                el.innerText = state.exam.current.q;
+                el.style.color = "white";
+            } else {
+                el.innerText = "【请听语音播报...】";
+                el.style.color = "var(--warning)";
+            }
+        }
+
+        // --- 硬件操作 ---
+        function handleLeverClick(e) {
+            if (isLocked()) return;
+            const x = e.clientX - e.currentTarget.getBoundingClientRect().left;
+            if (x < 40) { state.car.lever = 'left'; state.car.flash = 0; }
+            else if (x >= 40 && x <= 80) { state.car.lever = 'middle'; state.car.flash = 0; }
+            else {
+                state.car.lever = 'right'; state.car.flash++;
+                const h = document.getElementById('lever-handle');
+                h.classList.add('flashed'); setTimeout(() => h.classList.remove('flashed'), 150);
+            }
+            updateUI();
+        }
+
+        function rotateKnob() { if (isLocked()) return; state.car.knob = (state.car.knob + 1) % 3; updateUI(); }
+        function toggleHazard() { if (isLocked()) return; state.car.hazard = !state.car.hazard; updateUI(); }
+
+        function updateUI() {
+            document.getElementById('knob').style.transform = `rotate(${state.car.knob * 45}deg)`;
+            document.getElementById('knob-label').innerText = ["OFF", "示廓灯", "大灯"][state.car.knob];
+            document.getElementById('lever-handle').className = `lever-handle ${state.car.lever}`;
+            document.getElementById('flash-count').innerText = state.car.flash > 0 ? `闪光计数: ${state.car.flash}` : "";
+            document.getElementById('hazard-btn').classList.toggle('active', state.car.hazard);
+        }
+
+        // --- 业务逻辑 ---
+        function submit(isTimeout = false) {
+            stopTimer();
+            const u = state.car; const q = state.exam.current;
+            let ok = (u.knob === q.knob && u.hazard === q.hazard);
+            if (q.lever === 'flash') ok = ok && (u.flash >= 2);
+            else ok = ok && (u.lever === q.lever);
+
+            state.exam.total++;
+            state.stats[q.id].count++;
+            if (ok && !isTimeout) {
+                state.stats[q.id].right++;
+                state.exam.score.r++;
+                showResult("正确 √", "var(--success)", "动作标准");
+            } else {
+                state.exam.score.w++;
+                showResult(isTimeout ? "超时 ×" : "错误 ×", "var(--danger)", q.note);
+            }
+            updateScoreUI();
+            state.car.flash = 0; if (state.car.lever === 'right') state.car.lever = 'middle';
+            updateUI();
+            setTimeout(nextQuestion, 2500);
+        }
+
+        function showResult(t, c, d) {
+            document.getElementById('result-mask').style.display = 'flex';
+            const title = document.getElementById('res-title');
+            title.innerText = t; title.style.color = c;
+            document.getElementById('res-desc').innerText = d;
+        }
+
+        function togglePause() {
+            if (!state.exam.running || document.getElementById('main-btn').disabled) return;
+            state.exam.paused = !state.exam.paused;
+            document.getElementById('pause-overlay').style.display = state.exam.paused ? 'flex' : 'none';
+            document.getElementById('pause-btn').innerText = state.exam.paused ? '恢复' : '暂停';
+            if (state.exam.paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume();
+        }
+
+        // --- 分析与模式 ---
+        function openAnalysis() {
+            const body = document.getElementById('analysis-body');
+            body.innerHTML = "";
+            const all = state.exam.total || 1;
+            bank.forEach(b => {
+                const s = state.stats[b.id];
+                const weight = ((s.count / all) * 100).toFixed(0) + "%";
+                const rate = s.count === 0 ? "0%" : ((s.right / s.count) * 100).toFixed(0) + "%";
+                let cls = "row-gray";
+                if (s.count > 0) cls = (s.right < s.count) ? "row-red" : "row-green";
+                body.innerHTML += `<tr class="${cls}"><td>${b.q}</td><td>${weight}</td><td>${rate}</td></tr>`;
+            });
+            document.getElementById('analysis-modal').style.display = 'flex';
+        }
+
+        function setTrainMode(m) {
+            state.exam.mode = m;
+            document.getElementById('mode-tag').innerText = { sequence: '顺序训练', random: '随机训练', wrong: '错题专项' }[m];
+            document.getElementById('analysis-modal').style.display = 'none';
+            if (state.exam.running) nextQuestion();
+        }
+
+        function setSpeakMode(val) {
+            state.exam.showTitle = val;
+            document.getElementById('ts-both').classList.toggle('active', val);
+            document.getElementById('ts-only').classList.toggle('active', !val);
+            if (state.exam.running && state.exam.current) renderHUD();
+        }
+
+        function isLocked() { return !state.exam.running || state.exam.paused || document.getElementById('main-btn').disabled; }
+        function stopTimer() { clearInterval(state.timer.ref); }
+        function startTimer(s) {
+            state.timer.left = s;
+            state.timer.ref = setInterval(() => {
+                if (state.exam.paused) return;
+                state.timer.left -= 0.1;
+                if (state.timer.left <= 0) { stopTimer(); submit(true); }
+                document.getElementById('timer').innerText = Math.max(0, state.timer.left).toFixed(1);
+            }, 100);
+        }
+        function updateScoreUI() {
+            document.getElementById('s-right').innerText = state.exam.score.r;
+            document.getElementById('s-wrong').innerText = state.exam.score.w;
+        }
+        function closeAnalysis() { document.getElementById('analysis-modal').style.display = 'none'; }
+        function speak(t, cb) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.onend = cb; window.speechSynthesis.speak(u); }
+    </script>
+</body>
+
+</html>
